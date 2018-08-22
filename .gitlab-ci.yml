@@ -1,0 +1,130 @@
+stages:
+    - backup
+    - pre_install
+    - deploy
+    - clean
+
+backup_job_1:
+  stage: backup
+  script:
+    - mkdir -p /home/ubuntu/backups/backups_api/
+    - sudo rm -rf /home/ubuntu/backups/backups_api/*
+    - export epoch=$(date +%s)
+    - sudo tar -czf /home/ubuntu/backups/backups_api/${epoch}.tar.gz /var/www/api/
+  tags:
+    - qacombustible
+  only :
+    - qa
+
+
+pre_install_job_2:
+  stage: pre_install
+  script:
+    - mkdir -p /tmp/api/
+    - cp -rf ./* /tmp/api/
+  when: on_success
+  tags:
+    - qacombustible
+  only :
+    - qa
+
+deploy_job_3:
+  stage: deploy
+  script:
+    - sudo rm -rf /var/www/api/*
+    - sudo cp -rf /tmp/api/* /var/www/api/
+    - sed -i -e "s;DB_HOST=192.168.0.114;DB_HOST=combustibledb.clbkxwpqo0ld.us-east-1.rds.amazonaws.com;g" /home/ubuntu/builds/cae67ea2/0/ControlCombustible/ControlCombustible-api/.env
+    - sed -i -e "s;DB_DATABASE=gasolinera;DB_DATABASE=combustible_qa;g" /home/ubuntu/builds/cae67ea2/0/ControlCombustible/ControlCombustible-api/.env
+    - sed -i -e "s;DB_USERNAME=postgres;DB_USERNAME=combustible;g" /home/ubuntu/builds/cae67ea2/0/ControlCombustible/ControlCombustible-api/.env
+    - sed -i -e "s;DB_PASSWORD=123456;DB_PASSWORD=C0mb\*\$t\!bl\.;g" /home/ubuntu/builds/cae67ea2/0/ControlCombustible/ControlCombustible-api/.env
+    - cd /var/www/api/
+    - sudo composer install
+    - sudo php artisan migrate --force
+    - sudo chmod 777 -R storage/
+    - sudo rm -rf /tmp/api
+  when: on_success
+  tags:
+    - qacombustible
+  only :
+    - qa
+
+
+clean_job_4:
+  stage: clean
+  script:
+    - sudo rm -rf /tmp/api/*
+    - sudo rm -rf /var/www/api/*
+    - cd /var/www/api/
+    - sudo tar -xzf /home/ubuntu/backups/backups_api/${epoch}.tar.gz
+  when:  on_failure
+  tags:
+    - qacombustible
+  only :
+    - qa
+
+
+
+
+
+
+
+
+
+backup_job_5:
+  stage: backup
+  script:
+    - mkdir -p /home/ubuntu/backups/backups_api/
+    - sudo rm -rf /home/ubuntu/backups/backups_api/*
+    - export epoch=$(date +%s)
+    - sudo tar -czf /home/ubuntu/backups/backups_api/${epoch}.tar.gz /var/www/api/
+  tags:
+    - prodcombustible
+  only :
+    - tags
+
+pre_install_job_6:
+  stage: pre_install
+  script:
+    - mkdir -p /tmp/api/
+    - cp -rf ./* /tmp/api/
+  when: on_success
+  tags:
+    - prodcombustible
+  only :
+    - tags
+
+
+deploy_job_7:
+  stage: deploy
+  script:
+    - sudo rm -rf /var/www/api/*
+    - sudo cp -rf /tmp/api/* /var/www/api/
+    - sed -i -e "s;DB_HOST=localhost;DB_HOST=linabd.ckfkjtjzgxxj.us-east-1.rds.amazonaws.com;g" /home/ubuntu/builds/df024464/0/ControlCombustible/ControlCombustible-api/.env
+    - sed -i -e "s;DB_DATABASE=gasolinera;DB_DATABASE=lina;g" /home/ubuntu/builds/df024464/0/ControlCombustible/ControlCombustible-api/.env
+    - sed -i -e "s;DB_USERNAME=postgres;DB_USERNAME=combustible;g" /home/ubuntu/builds/df024464/0/ControlCombustible/ControlCombustible-api/.env
+    - sed -i -e "s;DB_PASSWORD=123456;DB_PASSWORD=C0mb\*\$t\!bl\.;g" /home/ubuntu/builds/df024464/0/ControlCombustible/ControlCombustible-api/.env
+    - cd /var/www/api
+    - sudo composer install
+    - sudo php artisan migrate
+    - sudo chmod 777 -R storage/
+    - sudo chmod 777 -R  /var/www/api/bootstrap/cache
+    - sudo rm -rf /tmp/api
+    - sudo rm -Rf /home/ubuntu/builds/df024464/0/ControlCombustible/ControlCombustible-api/vendor
+  when: on_success
+  tags:
+    - prodcombustible
+  only :
+    - tags
+
+clean_job_8:
+  stage: clean
+  script:
+    - sudo rm -rf /tmp/api/*
+    - sudo rm -rf /var/www/api/*
+    - cd /var/www/api/
+    - sudo tar -xzf /home/ubuntu/backups/backups_api/${epoch}.tar.gz
+  when:  on_failure
+  tags:
+    - prodcombustible
+  only :
+    - tags
